@@ -14,8 +14,8 @@ goalIdx = 7
 # inherits from search.Problem
 class DriverlogProblem(search.Problem):
     def __init__(self, initial, goal):
-        """Don't forget to set the goal or implement the goal test"""
         self.goal = goal
+        self.nextStates = []
         search.Problem.__init__(self, initial, goal)
 
     def printCitiesInDict(self, state, cityDictionary):
@@ -25,6 +25,7 @@ class DriverlogProblem(search.Problem):
             print "Drivers: " , cityDictionary[val]["Drivers"], "\n"
             print "Trucks: " , cityDictionary[val]["Trucks"], "\n"
             print "Packages: " , cityDictionary[val]["Packages"], "\n"
+            print "PackagesOnTrucks: " , cityDictionary[val]["PackagesOnTrucks"], "\n"
             print "Links: " , cityDictionary[val]["Links"], "\n"
             print "Paths: " , cityDictionary[val]["Paths"], "\n"
             print "********************* City ", val , " End *********************\n" 
@@ -36,6 +37,8 @@ class DriverlogProblem(search.Problem):
                                                         "Drivers": [],
                                                         "Trucks": [],
                                                         "Packages": [],
+                                                        "PackagesOnTrucks": {},
+                                                        "DriversOnTrucks": {},
                                                         "Links": [],
                                                         "Paths": []
                                                       }
@@ -55,23 +58,168 @@ class DriverlogProblem(search.Problem):
         for key, item in enumerate(state[pathsIdx]):
             origin, destination = state[pathsIdx][key]
             cityDictionary[origin]["Paths"].append(destination)
+
+        # Adding Trucks to Packages on Trucks dictionary
+        for key, item in enumerate(state[pathsIdx]):
+            origin, destination = state[pathsIdx][key]
+            for truck in cityDictionary[origin]["Trucks"]:
+                cityDictionary[origin]["PackagesOnTrucks"][truck] = []
+
+
+    def compute_load_truck_moves(self, state, cityDictionary):
+        tmpState = list(state)
+        tmpState[6] = list(tmpState[6])
+        tmpState[6][2] = list(tmpState[6][2])
+        for idx, val in enumerate(cityDictionary):
+            if len(cityDictionary[val]["Trucks"]) == 0 or len(cityDictionary[val]["Packages"]) == 0:
+                print "City " + val + " Cannot load packages to truck"
+            for package in state[6][2]:
+                if package[0] in cityDictionary[val]["Packages"]:
+                    # TODO update cityDicty PackageOnTrucks .. ask Alex
+                    tmpState[6][2].remove(package)
+                    tmpState[6][2] = tuple(tmpState[6][2])
+                    tmpState[6] = tuple(tmpState[6])
+                    tmpState = tuple(tmpState)
+                    for truck in cityDictionary[val]["Trucks"]:
+                        yield (("load_truck " + package[0] + " "+ truck), (tmpState))   
+                    tmpState = list(tmpState)
+                    tmpState[6] = list(tmpState[6])
+                    tmpState[6][2] = list(tmpState[6][2])
+                    tmpState[6][2].append(package)
+
+    # TODO - how am i supposed to keep track of who is on what truck? This is based on the algos decision
+    # For all trucks in city
+        # Check which packages are on trucks
+        # Unload them and add to current city
+        # Yield new state
+    def compute_unload_truck_moves(self, state, cityDictionary):
+        tmpState = list(state)
+        tmpState[2] = list(tmpState[2])
+        for idx, val in enumerate(cityDictionary):
+            print "********************* City ", val , "Unloading truck", "*********************\n" 
+            if len(cityDictionary[val]["PackagesOnTrucks"]) == 0:
+                print "No Packages to unload"
+            for truck in cityDictionary[val]["PackagesOnTrucks"]:
+                    if len(cityDictionary[val]["PackagesOnTrucks"][truck]) != 0:
+                        for package in cityDictionary[val]["PackagesOnTrucks"][truck]:
+                            print "Printing my fing list", cityDictionary[val]["PackagesOnTrucks"][truck], package
+                            cityDictionary[val]["PackagesOnTrucks"][truck].remove(package)
+                            # TODO, for not iterating over all items in list
+                            #if package not in cityDictionary[val]["Packages"]:
+                            #    cityDictionary[val]["Packages"].append(package)
+                            #    print "Appeneded"
+                            # Updating State of World
+                            #self.nextStates.append("Load truck " + truck + " with package " + package , ())
+            print "************ ENDING CITY " + val + " TRUCK UNLOAD **************"
+
+    def compute_board_truck_moves(self, state, cityDictionary):
+        tmpState = list(state)
+        tmpState[6] = list(tmpState[6])
+        tmpState[6][0] = list(tmpState[6][0])
+        for idx, val in enumerate(cityDictionary):
+            if len(cityDictionary[val]["Trucks"]) == 0 or len(cityDictionary[val]["Drivers"]) == 0:
+                print "City " + val + " Cannot board driver to truck"
+            for driver in state[6][0]:
+                if driver[0] in cityDictionary[val]["Drivers"]:
+                    tmpState[6][0].remove(driver)
+                    tmpState[6][0] = tuple(tmpState[6][0])
+                    tmpState[6] = tuple(tmpState[6])
+                    tmpState = tuple(tmpState)
+                    for truck in cityDictionary[val]["Trucks"]:
+                        yield (("board_truck " + driver[0] + " "+ truck), (tmpState))   
+                    tmpState = list(tmpState)
+                    tmpState[6] = list(tmpState[6])
+                    tmpState[6][0] = list(tmpState[6][0])
+                    tmpState[6][0].append(driver)
+
+    def compute_disembark_truck_moves(self, state, cityDictionary):
+        # TODO How do i save passengers on trucks into the state? How do I know what action the algorithm selected?
+        # This is the only way to update state accoridingly
+        yield "yaya"
+
+    def compute_drive_truck_moves(self, state, cityDictionary):
+        tmpState = list(state)
+        tmpState[6] = list(tmpState[6])
+        tmpState[6][1] = list(tmpState[6][1])
+        for idx, val in enumerate(cityDictionary):
+            # TODO Will need to check for people on trucks as well, needed criteria for driving
+            if len(cityDictionary[val]["Trucks"]) == 0 or len(cityDictionary[val]["Links"]) == 0:
+                print "City " + val + " Cannot drive truck via Link"
+            for truck in state[6][1]:
+                if truck[0] in cityDictionary[val]["Trucks"]:
+                    for link in cityDictionary[val]["Links"]:
+                        tmpState[6][1].remove(truck)
+                        tmpState[6][1].append((truck[0], link))
+                        tmpState[6][1] = tuple(tmpState[6][1])
+                        tmpState[6] = tuple(tmpState[6])
+                        tmpState = tuple(tmpState)
+                        yield (("drive_truck " + truck[0] + " " + truck[1] + " " + link), (tmpState))   
+                        tmpState = list(tmpState)
+                        tmpState[6] = list(tmpState[6])
+                        tmpState[6][1] = list(tmpState[6][1])
+                        tmpState[6][1].remove((truck[0], link))
+                        tmpState[6][1].append(truck)
+
+    def compute_walk_moves(self, state, cityDictionary):
+        tmpState = list(state)
+        tmpState[6] = list(tmpState[6])
+        tmpState[6][0] = list(tmpState[6][0])
+        for idx, val in enumerate(cityDictionary):
+            if len(cityDictionary[val]["Drivers"]) == 0 or len(cityDictionary[val]["Paths"]) == 0:
+                print "City " + val + " Cannot walk driver via Path"
+            for driver in state[6][0]:
+                if driver[0] in cityDictionary[val]["Drivers"]:
+                    for path in cityDictionary[val]["Paths"]:
+                        tmpState[6][0].remove(driver)
+                        tmpState[6][0].append((driver[0], path))
+                        tmpState[6][0] = tuple(tmpState[6][0])
+                        tmpState[6] = tuple(tmpState[6])
+                        tmpState = tuple(tmpState)
+                        yield (("walk " + driver[0] + " " + driver[1] + " " + path), (tmpState))   
+                        tmpState = list(tmpState)
+                        tmpState[6] = list(tmpState[6])
+                        tmpState[6][0] = list(tmpState[6][0])
+                        tmpState[6][0].remove((driver[0], path))
+                        tmpState[6][0].append(driver)
         
+
     def successor(self, state):
-        """Given a state, return a sequence of (action, state) pairs reachable
-        from this state. If there are many successors, consider an iterator
-        that yields the successors one at a time, rather than building them
-        all at once. Iterators will work fine within the framework.
-        Must return a sequence of (action, state) pairs"""
+        self.nextStates = []
         global builtCityDict
         if builtCityDict == False:
             self.addCitiesToDict(state)
             self.mapStartingPosToCityDict(state)
-            builtCityDict = True
             self.printCitiesInDict(state, cityDictionary)
+            builtCityDict = True
+
+        for item in self.compute_load_truck_moves(state, cityDictionary):
+            self.nextStates.append(item)
+
+        #for item in self.compute_unload_truck_moves(state, cityDictionary):
+            #print item
+            #    append to self.nextState
+        #    print "\n"
+
+        for item in self.compute_board_truck_moves(state, cityDictionary):
+            # TODO do i need to return the whole world information, or only new positions?
+            self.nextStates.append(item)
+
+        for item in self.compute_drive_truck_moves(state, cityDictionary):
+            self.nextStates.append(item)
+
+        for item in self.compute_walk_moves(state, cityDictionary):
+            # TODO do i need to return the whole world information, or only new positions?
+            self.nextStates.append(item)
+            
+
+        #return self.nextStates
+
+        return [("load_truck", "a",'isuzu'), (state)]
 
     def goal_test(self, state):
-        """ Given a state, checks if this is the goal state, compares to the created goal state
-        Must return a boolean"""
+        if state == self.goal:
+            return True
+        return False
 
         
     def h(self, node):
