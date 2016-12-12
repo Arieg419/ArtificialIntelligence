@@ -79,6 +79,7 @@ class Node:
             x = x.parent
         return result
 
+        # TODO
     def expand(self, problem):
         "Return a list of nodes reachable from this node. [Fig. 3.8]"
         return [Node(next, self, act,

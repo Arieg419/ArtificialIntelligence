@@ -1,5 +1,6 @@
 import search
 import math
+from copy import deepcopy
 
 ids=["111111111","111111111"]
 cityDictionary = {}
@@ -11,12 +12,27 @@ pathsIdx = 5
 startingPositionsIdx = 6
 goalIdx = 7
 
+
+
 # inherits from search.Problem
 class DriverlogProblem(search.Problem):
     def __init__(self, initial, goal):
         self.goal = goal
         self.nextStates = []
         search.Problem.__init__(self, initial, goal)
+        self.stateRep = ["Drivers: ", "Trucks", "Packages: ", "Locations: ", "Links: ", "Path: ", "Starting Position: ", "Goal: "]
+
+    def printState(self, state):
+        print "********&&&&&&&&&&& PrintState Function ********&&&&&&&&&&& "
+        for i,item in enumerate(state):
+            print self.stateRep[i], item, "\n"
+        print "********&&&&&&&&&&& PrintState Function End ********&&&&&&&&&&& "
+
+    def grabCurrentState(self, state):
+        print "********&&&&&&&&&&& GRAB CURRENT STATE ********&&&&&&&&&&& "
+        print state[6]
+        print "********&&&&&&&&&&& GRAB CURRENT STATE ********&&&&&&&&&&& "
+    
 
     def printCitiesInDict(self, state, cityDictionary):
         print "*************************** CitiesDict ***************************"
@@ -67,21 +83,31 @@ class DriverlogProblem(search.Problem):
 
 
     def compute_load_truck_moves(self, state, cityDictionary):
-        tmpState = list(state)
-        tmpState[6] = list(tmpState[6])
+        print 1
+        tmpState = list(deepcopy(state))
+        # self.printState(tmpState)
+        print tmpState
+        tmpState[6] = list(tmpState[6]) #problem
+        print 7
         tmpState[6][2] = list(tmpState[6][2])
         for idx, val in enumerate(cityDictionary):
+            print 2
             if len(cityDictionary[val]["Trucks"]) == 0 or len(cityDictionary[val]["Packages"]) == 0:
                 print "City " + val + " Cannot load packages to truck"
-            for package in state[6][2]:
+            for package in state[6][2]: #('a', '1')
+                print 3
                 if package[0] in cityDictionary[val]["Packages"]:
-                    # TODO update cityDicty PackageOnTrucks .. ask Alex
+                    print 4
                     tmpState[6][2].remove(package)
-                    tmpState[6][2] = tuple(tmpState[6][2])
-                    tmpState[6] = tuple(tmpState[6])
-                    tmpState = tuple(tmpState)
                     for truck in cityDictionary[val]["Trucks"]:
-                        yield (("load_truck " + package[0] + " "+ truck), (tmpState))   
+                        print 5
+                        tmpState[6][2].append((package[0], truck))
+                        tmpState[6][2] = tuple(tmpState[6][2]) # package and goal state
+                        tmpState[6] = tuple(tmpState[6])
+                        tmpState = tuple(tmpState)
+                        #cityDictionary[val]["PackagesOnTrucks"][truck].append(package[0])
+                        yield ("load_truck", package[0], truck), (tmpState[6])  
+                    print 6
                     tmpState = list(tmpState)
                     tmpState[6] = list(tmpState[6])
                     tmpState[6][2] = list(tmpState[6][2])
@@ -184,7 +210,6 @@ class DriverlogProblem(search.Problem):
         
 
     def successor(self, state):
-        self.nextStates = []
         global builtCityDict
         if builtCityDict == False:
             self.addCitiesToDict(state)
@@ -192,29 +217,43 @@ class DriverlogProblem(search.Problem):
             self.printCitiesInDict(state, cityDictionary)
             builtCityDict = True
 
-        for item in self.compute_load_truck_moves(state, cityDictionary):
-            self.nextStates.append(item)
+        currState = self.grabCurrentState(state)
+        print currState
+
+
+        for act, newState in self.compute_load_truck_moves(state, cityDictionary):
+            self.nextStates.append((act, newState))
+            #print self.nextStates
+            yield [act, newState]
+
+        #print "last print !!!!!!!!!!"
+        #print self.nextStates
+        #for item in self.nextStates:
+        #    print item
 
         #for item in self.compute_unload_truck_moves(state, cityDictionary):
             #print item
             #    append to self.nextState
         #    print "\n"
 
-        for item in self.compute_board_truck_moves(state, cityDictionary):
-            # TODO do i need to return the whole world information, or only new positions?
-            self.nextStates.append(item)
+        # for item in self.compute_board_truck_moves(state, cityDictionary):
+        #     # TODO do i need to return the whole world information, or only new positions?
+        #     self.nextStates.append(item)
 
-        for item in self.compute_drive_truck_moves(state, cityDictionary):
-            self.nextStates.append(item)
+        # for item in self.compute_drive_truck_moves(state, cityDictionary):
+        #     self.nextStates.append(item)
 
-        for item in self.compute_walk_moves(state, cityDictionary):
-            # TODO do i need to return the whole world information, or only new positions?
-            self.nextStates.append(item)
+        # for item in self.compute_walk_moves(state, cityDictionary):
+        #     # TODO do i need to return the whole world information, or only new positions?
+        #     self.nextStates.append(item)
             
 
-        #return self.nextStates
+        # #return self.nextStates
+        # for item in self.nextStates:
+        #     print item, "\n"
 
-        return [("load_truck", "a",'isuzu'), (state)]
+        # return [("load_truck", "a",'isuzu'), (state)]
+
 
     def goal_test(self, state):
         if state == self.goal:
