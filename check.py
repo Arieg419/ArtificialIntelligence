@@ -51,7 +51,7 @@ def check_problem(p, search_method, timeout):
 def solve_problems(problem):
     solved = 0
     print "PROBLEM: "
-    definitions = ("Drivers:","Trucks:", "Locations:","Packages:", "Links:", "Paths:", "Starting positions:", "Goal:" )
+    definitions = ("Drivers:", "Trucks:", "Packages:","Locations:", "Links:", "Paths:", "Starting positions:", "Goal:")
     to_print = zip(definitions, problem)
     for row in to_print:
         for c in row:
@@ -72,28 +72,29 @@ def solve_problems(problem):
     result = check_problem(p, search.astar_search, timeout)
     print "A*   ", result        
     result = check_problem(p, search.breadth_first_graph_search, timeout)
-    print "BFSg ", result
-    result = check_problem(p, search.breadth_first_tree_search, timeout)
-    print "BFSt ", result
-    result = check_problem(p, search.depth_first_graph_search, timeout)
-    print "DFSg ", result
-    result = check_problem(p, search.depth_first_tree_search, timeout)
-    print "DFSt ", result
-    result = check_problem(p, search.iterative_deepening_search, timeout)
+    # print "BFSg ", result
+    # result = check_problem(p, search.breadth_first_tree_search, timeout)
+    # print "BFSt ", result
+    # result = check_problem(p, search.depth_first_graph_search, timeout)
+    # print "DFSg ", result
+    # result = check_problem(p, search.depth_first_tree_search, timeout)
+    # print "DFSt ", result
+    # result = check_problem(p, search.iterative_deepening_search, timeout)
     
     print "GBFS Solved ", solved
 
     
 def main():
     print ex1.ids
-    problem=(("jon", "sansa"),
-        ("isuzu", "mazda"),
-        ("a", "b"),
-        ("1", "2"),
-        (("1", "2"),),
-        (),
-        ((("jon", "1"), ("sansa", "1")), (("isuzu", "1"), ("mazda", "2")), (("a", "1"), ("b", "2"))),
-        (("a", "2"), ("b", "1")))
+    problem=(("harry", "ron", "hermione", "lilly potter"),
+        ("isuzu", "mazda", "subaru", "jeep"),
+        ("a", "b", "c", "d"),
+        ("1", "2", "3", "4"),
+        (("1", "2"), ("2", "3"), ("1", "3"), ("1", "4"), ("2", "4"), ("3", "4"),),
+        (("1", "2"), ("2", "3"), ("1", "3"), ("1", "4"), ("2", "4"), ("3", "4"),),
+        ((("harry", "isuzu"), ("ron", "mazda"), ("hermione", "subaru"), ("lilly potter", "1")), (("isuzu", "2"),
+            ("mazda", "3"), ("jeep", "1"), ("subaru", "4")), (("a", "isuzu"), ("b", "mazda"), ("c", "3"), ("d", "4"))),
+        (("a", "2"), ("b", "3"), ("c", "4"), ("d", "1")))
     solve_problems(problem)
     
 if __name__ == '__main__':
