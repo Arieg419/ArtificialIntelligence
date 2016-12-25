@@ -121,10 +121,11 @@ class DriverlogProblem(search.Problem):
                         newState = tuple(deepcopy(newState))
                         self.newActions.append(("load_truck", package[0], truck))
                         yield ("load_truck", package[0], truck), (newState)  # act, state
-                    newState = list(newState)
-                    newState[2] = list(newState[2])
-                    # newState[2].append(package) do i need this?
-                    # Yield new state
+                        newState = list(newState)
+                        newState[2] = list(newState[2])
+                        newState[2].remove((package[0], truck))
+                    newState[2].append(package)
+
 
     def compute_unload_truck_moves(self, state, cityDictionary):
         newState = list(deepcopy(state))
@@ -146,6 +147,8 @@ class DriverlogProblem(search.Problem):
                     yield ("unload_truck", package[0], truck), (newState)  # act, state
                     newState = list(newState)
                     newState[2] = list(newState[2])
+                    newState[2].append(package)
+                    newState[2].remove((package[0], truckLocation))
             #print "************ ENDING CITY " + truck + " TRUCK UNLOAD **************"
 
     # TODO what if a driver is already on a truck?!?!
@@ -160,16 +163,18 @@ class DriverlogProblem(search.Problem):
             for driver in state[0]:
                 if driver[0] in cityDictionary[val]["Drivers"]:
                     for truck in cityDictionary[val]["Trucks"]:
-                        if ("board_truck ", driver[0], truck) in self.newActions:
+                        if ("board_truck", driver[0], truck) in self.newActions:
                             continue
-                        self.newActions.append(("board_truck ", driver[0], truck))
+                        self.newActions.append(("board_truck", driver[0], truck))
                         newState[0].remove(driver)
                         newState[0].append((driver[0], truck))
                         newState[0] = tuple(deepcopy(newState[0]))
                         newState = tuple(deepcopy(newState))
-                        yield ("board_truck ", driver[0], truck), (newState)
+                        yield ("board_truck", driver[0], truck), (newState)
                         newState = list(newState)
                         newState[0] = list(newState[0])
+                        newState[0].append(driver)
+                        newState[0].remove((driver[0], truck))
 
     # TODO optimization: cache all starting positions into global variables
     def compute_disembark_truck_moves(self, state, cityDictionary):
@@ -182,40 +187,45 @@ class DriverlogProblem(search.Problem):
                 continue
             for driver in state[0]:
                 if driver[0] in cityDictionary[truck]["Drivers"]:
-                    if ("disembark_truck ", driver[0], truck) in self.newActions:
+                    if ("disembark_truck", driver[0], truck) in self.newActions:
                         continue
                     truckLocation = cityDictionary[truck]["Location"]
-                    self.newActions.append(("disembark_truck ", driver[0], truck))
+                    self.newActions.append(("disembark_truck", driver[0], truck))
                     newState[0].remove(driver)
                     newState[0].append((driver[0], truckLocation))
                     newState[0] = tuple(deepcopy(newState[0]))
                     newState = tuple(deepcopy(newState))
-                    yield ("disembark_truck ", driver[0], truck), (newState)
+                    yield ("disembark_truck", driver[0], truck), (newState)
                     newState = list(newState)
                     newState[0] = list(newState[0])
+                    newState[0].append(driver)
+                    newState[0].remove((driver[0], truckLocation))
 
     def compute_drive_truck_moves(self, state, cityDictionary):
         newState = list(deepcopy(state))
-        newState[0] = list(deepcopy(state[0])) # list of driver positions
+        newState[0] = list(deepcopy(newState[0])) # list of driver positions
         for idx, truck in enumerate(cityDictionary):
             if truck not in self.origState[1]: # only on trucks
                 continue
-            if len(cityDictionary[truck]["Drivers"]) == 0:
+            if len(cityDictionary[truck]["Drivers"]) == 0: # no drivers on trucks
                 continue
             for driver in state[0]: # driver is (driver, truck)
                 if driver[0] in cityDictionary[truck]["Drivers"]:
                     truckLocation = cityDictionary[truck]["Location"]
                     for link in cityDictionary[truckLocation]["Links"]:
-                        if ("drive_truck ", truck, truckLocation, link) in self.newActions:
+                        isThisIt = ("drive_truck", truck, truckLocation, link)
+                        if isThisIt in self.newActions:
                             continue
-                        self.newActions.append(("drive_truck ", truck, truckLocation, link))
-                        newState[0].remove(driver) # TODO, this remove fails
+                        self.newActions.append(("drive_truck", truck, truckLocation, link))
+                        newState[0].remove(driver)
                         newState[0].append((truck, link))
                         newState[0] = tuple(deepcopy(newState[0]))
                         newState = tuple(deepcopy(newState))
-                        yield (("drive_truck ", truck, truckLocation, link), (newState))
+                        yield (("drive_truck", truck, truckLocation, link), (newState))
                         newState = list(newState)
                         newState[0] = list(newState[0])
+                        newState[0].append(driver)
+                        newState[0].remove((truck, link))
 
     def compute_walk_moves(self, state, cityDictionary):
         newState = list(deepcopy(state))
@@ -227,18 +237,29 @@ class DriverlogProblem(search.Problem):
                 continue
             for driver in state[0]:  # driver is (driver, city)
                 if driver[0] in cityDictionary[city]["Drivers"]:
-                    for path in cityDictionary[city]["Links"]:
-                        print "************** PATH TIME *****************", path
+                    for path in cityDictionary[city]["Paths"]:
+                        #print "************** PATH TIME *****************", path
                         if ("walk ", driver[0], city, path) in self.newActions:
                             continue
-                        self.newActions.append(("walk ", driver[0], city, path))
-                        newState[0].remove(driver) # checked remove here on list, all good :)
+                        self.newActions.append(("walk", driver[0], city, path))
+                        newState[0].remove(driver)
                         newState[0].append((driver[0], path))
                         newState[0] = tuple(deepcopy(newState[0]))
                         newState = tuple(deepcopy(newState))
-                        yield (("walk ", driver[0], city, path), (newState))
+                        yield (("walk", driver[0], city, path), (newState))
                         newState = list(newState)
                         newState[0] = list(newState[0])
+                        newState[0].append(driver)
+                        newState[0].remove((driver[0], path))
+
+    def buildRetValue(self, state, newState):
+        # get state, turn to list
+        tmpState = list(deepcopy(state))
+        tmpState[6] = newState
+        tmpState = tuple(tmpState)
+
+        return tmpState
+
 
     def successor(self, state):
         global builtCityDict
@@ -246,8 +267,8 @@ class DriverlogProblem(search.Problem):
         if builtCityDict == False:
             self.addCitiesToDict(state)
             self.mapStartingPosToCityDict(state)
-            self.printingTrucksInDict(state, self.cityDictionary)
-            self.printCitiesInDict(state, self.cityDictionary)
+            #self.printingTrucksInDict(state, self.cityDictionary)
+            #self.printCitiesInDict(state, self.cityDictionary)
             builtCityDict = True
 
         currState = self.grabCurrentState(state)
@@ -255,37 +276,39 @@ class DriverlogProblem(search.Problem):
         # TODO nextStates should clean itself before every successor run, or should only run once for all search algo (GBFS, A*,etc..)
         # TODO optimization, destructure currState and only passs relevant data to function
         for act, newState in self.compute_load_truck_moves(currState, self.cityDictionary):
-           self.nextStates.append((act, newState))
+           self.nextStates.append((act, self.buildRetValue(state, newState)))
 
 
         for act, newState in self.compute_unload_truck_moves(currState, self.cityDictionary):
-          self.nextStates.append((act, newState))
+          self.nextStates.append((act, self.buildRetValue(state, newState)))
 
 
         for act, newState in self.compute_board_truck_moves(currState, self.cityDictionary):
-            self.nextStates.append((act, newState))
+            self.nextStates.append((act, self.buildRetValue(state, newState)))
 
         for act, newState in self.compute_disembark_truck_moves(currState, self.cityDictionary):
-            self.nextStates.append((act, newState))
+            self.nextStates.append((act, self.buildRetValue(state, newState)))
 
         # TODO, remove function causes error to be thrown
         for act, newState in self.compute_drive_truck_moves(currState, self.cityDictionary):
-            self.nextStates.append((act, newState))
+            print "computer truck stuff"
+            self.nextStates.append((act, self.buildRetValue(state, newState)))
 
         # TODO, does not offer walk 1, 3 although we see it being created in debug mode. it is removed some time later.
         for act, newState in self.compute_walk_moves(currState, self.cityDictionary):
-            self.nextStates.append((act, newState))
+            self.nextStates.append((act, self.buildRetValue(state, newState)))
 
         print "*************************** NewState before yield *******************************"
         for item in self.nextStates:
             print item, "\n"
         print "*************************** END NewState before yield *******************************"
-        return self.nextStates
 
-            # print "last print !!!!!!!!!!"
-            # print self.nextStates
-            # for item in self.nextStates:
-            #    print item
+        #print self.nextStates
+        return self.nextStates
+        #print len(self.nextStates)
+        #return self.nextStates
+
+
 
 
 
