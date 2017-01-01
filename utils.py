@@ -702,7 +702,7 @@ class PriorityQueue(Queue):
         return len(self.A)
     def pop(self):
         if self.order == min:
-            #print self.A[0] # This is the steps he actually did
+            # print self.A[0] # This is the steps he actually did
             return self.A.pop(0)[1]
         else:
             return self.A.pop()[1]
