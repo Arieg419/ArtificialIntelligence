@@ -71,8 +71,7 @@ def solve_problems(problem):
        solved = solved + 1
     result = check_problem(p, search.astar_search, timeout)
     print "A*   ", result
-    result = check_problem(p, search.breadth_first_graph_search, timeout)
-    print "EXPERIMENT IS OVAAAAAAAAAAAA"
+    # result = check_problem(p, search.breadth_first_graph_search, timeout)
     # print "BFSg ", result
     # result = check_problem(p, search.breadth_first_tree_search, timeout)
     # print "BFSt ", result
@@ -87,22 +86,14 @@ def solve_problems(problem):
     
 def main():
     print ex1.ids
-    problem=(("jon", "sansa"),
-        ("isuzu", "mazda"),
-        ("a", "b"),
-        ("1", "2"),
-        (("1", "2"),),
-        (),
-        ((("jon", "1"), ("sansa", "1")), (("isuzu", "1"), ("mazda", "2")), (("a", "1"), ("b", "2"))),
-        (("a", "2"), ("b", "1")))
-    # problem = (("jon",),
-    #     ("isuzu",),
-    #     ("a",),
-    #     ("1", "2"),
-    #     (("1", "2"),),
-    #     (),
-    #     ((("jon", "1"),), (("isuzu", "1"),), (("a", "1"),)),
-    #     (("a", "2"),))
+    problem = (("frodo",),
+                   ("isuzu",),
+                   ("the_ring",),
+                   ("shire", "2", "3", "4", "5", "mount_doom"),
+                   (("shire", "2"), ("2", "3"), ("3", "4"), ("4", "5"), ("5", "mount_doom")),
+                   (("shire", "4"), ("3", "mount_doom")),
+                   ((("frodo", "shire"),), (("isuzu", "shire"),), (("the_ring", "shire"),)),
+                   (("the_ring", "mount_doom"), ("isuzu", "shire")))
     # problem=(("tyrion", "cercei"),
     #     ("isuzu",),
     #     ("a", "b"),
@@ -111,6 +102,22 @@ def main():
     #     (("1", "3"),),
     #     ((("tyrion", "1"), ("cercei", "isuzu")), (("isuzu", "1"),), (("a", "isuzu"), ("b", "3"))),
     #     (("a", "2"), ("b", "2")))
+    # problem = (("jon",),
+    #     ("isuzu",),
+    #     ("a",),
+    #     ("1", "2"),
+    #     (("1", "2"),),
+    #     (),
+    #     ((("jon", "1"),), (("isuzu", "1"),), (("a", "1"),)),
+    #     (("a", "2"),))
+    # problem = (("jon", "sansa"),
+    #            ("isuzu", "mazda"),
+    #            ("a", "b"),
+    #            ("1", "2"),
+    #            (("1", "2"),),
+    #            (),
+    #            ((("jon", "1"), ("sansa", "1")), (("isuzu", "1"), ("mazda", "2")), (("a", "1"), ("b", "2"))),
+    #            (("a", "2"), ("b", "1")))
     # problem=(("frodo",),
     #     ("isuzu",),
     #     ("the_ring",),
