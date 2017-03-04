@@ -86,14 +86,14 @@ def solve_problems(problem):
     
 def main():
     print ex1.ids
-    problem = (("frodo",),
-                   ("isuzu",),
-                   ("the_ring",),
-                   ("shire", "2", "3", "4", "5", "mount_doom"),
-                   (("shire", "2"), ("2", "3"), ("3", "4"), ("4", "5"), ("5", "mount_doom")),
-                   (("shire", "4"), ("3", "mount_doom")),
-                   ((("frodo", "shire"),), (("isuzu", "shire"),), (("the_ring", "shire"),)),
-                   (("the_ring", "mount_doom"), ("isuzu", "shire")))
+    # problem = (("frodo",),
+    #                ("isuzu",),
+    #                ("the_ring",),
+    #                ("shire", "2", "3", "4", "5", "mount_doom"),
+    #                (("shire", "2"), ("2", "3"), ("3", "4"), ("4", "5"), ("5", "mount_doom")),
+    #                (("shire", "4"), ("3", "mount_doom")),
+    #                ((("frodo", "shire"),), (("isuzu", "shire"),), (("the_ring", "shire"),)),
+    #                (("the_ring", "mount_doom"), ("isuzu", "shire")))
     # problem=(("tyrion", "cercei"),
     #     ("isuzu",),
     #     ("a", "b"),
@@ -126,14 +126,14 @@ def main():
     #     (("shire", "4"), ("3", "mount_doom")),
     #     ((("frodo", "shire"),), (("isuzu", "shire"),), (("the_ring", "shire"),)),
     #     (("the_ring", "mount_doom"), ("isuzu", "shire")))
-    # problem=(("harry", "ron", "hermione"),
-    #     ("isuzu", "mazda", "subaru"),
-    #     ("a", "b", "c", "d"),
-    #     ("1", "2", "3", "4"),
-    #     (("1", "2"), ("2", "3"), ("1", "3"), ("1", "4"), ("2", "4"), ("3", "4"),),
-    #     (("1", "2"), ("2", "3"), ("1", "3"), ("1", "4"), ("2", "4"), ("3", "4"),),
-    #     ((("harry", "1"), ("ron", "2"), ("hermione", "3")), (("isuzu", "2"), ("mazda", "3"), ("subaru", "4")), (("a", "1"), ("b", "2"), ("c", "3"), ("d", "4"))),
-    #     (("a", "2"), ("b", "3"), ("c", "4"), ("d", "1")))
+    problem=(("harry", "ron", "hermione"),
+        ("isuzu", "mazda", "subaru"),
+        ("a", "b", "c", "d"),
+        ("1", "2", "3", "4"),
+        (("1", "2"), ("2", "3"), ("1", "3"), ("1", "4"), ("2", "4"), ("3", "4"),),
+        (("1", "2"), ("2", "3"), ("1", "3"), ("1", "4"), ("2", "4"), ("3", "4"),),
+        ((("harry", "1"), ("ron", "2"), ("hermione", "3")), (("isuzu", "2"), ("mazda", "3"), ("subaru", "4")), (("a", "1"), ("b", "2"), ("c", "3"), ("d", "4"))),
+        (("a", "2"), ("b", "3"), ("c", "4"), ("d", "1")))
     solve_problems(problem)
     
 if __name__ == '__main__':
