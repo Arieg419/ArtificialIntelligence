@@ -82,7 +82,8 @@ class Node:
         # TODO IMPORTANT PRINT
     def expand(self, problem):
         "Return a list of nodes reachable from this node. [Fig. 3.8]"
-        #print [Node(next, self, act,
+        # print self.path_cost, "\n"
+        # print [Node(next, self, act,
         #             problem.path_cost(self.path_cost, self.state, act, next))
         #        for (act, next) in problem.successor(self.state)]
         return [Node(next, self, act,
