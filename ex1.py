@@ -23,9 +23,10 @@ currDriverIdx = 0
 currTruckIdx = 1
 currPackIdx = 2
 
-def bfs(startNode, cities, bfsNodes):
+def bfs(startNode, cities, bfsNodes, typeOfTransport):
     queue = []
     startNode.visited = True
+    bfsNodes[startNode.name].visited = True
     queue.append(startNode.name)
     distDict = {}
     for city in cities:
@@ -34,15 +35,23 @@ def bfs(startNode, cities, bfsNodes):
     while queue:
         actualNodeName = queue.pop()
         actualNode = bfsNodes[actualNodeName]
-        for nName in actualNode.adjacenciesList:
-            n = bfsNodes[nName]
-            if not n.visited:
-                n.visited = True
-                queue.append(n.name)
-                distDict[n.name] = distDict[actualNodeName] + 1
+        if typeOfTransport == "path":
+            for nName in actualNode.pathAdjacenciesList:
+                n = bfsNodes[nName]
+                if not n.visited:
+                    n.visited = True
+                    queue.append(n.name)
+                    distDict[n.name] = distDict[actualNodeName] + 1
+        else:
+            for nName in actualNode.linkAdjacenciesList:
+                n = bfsNodes[nName]
+                if not n.visited:
+                    n.visited = True
+                    queue.append(n.name)
+                    distDict[n.name] = distDict[actualNodeName] + 1
     for nodeName, node in bfsNodes.iteritems():
         bfsNodes[nodeName].visited = False
-    # print "start node is ", startNode.name
+    # print "start node is ", startNode.name, typeOfTransport
     # for key, val in distDict.iteritems():
     #     print "key val right after bfs ", key, val
     return distDict
@@ -50,17 +59,19 @@ def bfs(startNode, cities, bfsNodes):
 class BFSnode:
     def __init__(self, name):
         self.name = name
-        self.adjacenciesList = []
+        self.linkAdjacenciesList = []
+        self.pathAdjacenciesList = []
         self.visited = False
 
     def printAdjacencies(self):
-        for neighbor in self.adjacenciesList:
+        for neighbor in self.linkAdjacenciesList:
+            print neighbor
+        for neighbor in self.pathAdjacenciesList:
             print neighbor
 
 class Graph:
-    def __init__(self, typeOfTransport):
+    def __init__(self):
         self.nodesList = []
-        self.typeOfTransport = typeOfTransport
         self.bfsNodes = {}
 
     def nodeInAdjacenciesList(self, adjlist, city):
@@ -80,11 +91,16 @@ class Graph:
     def createGraph(self, node):
         for city in node[locationIdx]: # ('1', '2', '3')
             currNode = BFSnode(city)
-            for link in node[self.typeOfTransport]: # link is (origin, destination)
-                if link[0] == city and not self.nodeInAdjacenciesList(currNode.adjacenciesList, link[1]):
-                    currNode.adjacenciesList.append(link[1])
-                if link[1] == city and not self.nodeInAdjacenciesList(currNode.adjacenciesList, link[0]):
-                    currNode.adjacenciesList.append(link[0])
+            for link in node[linksIdx]: # link is (origin, destination)
+                if link[0] == city and not self.nodeInAdjacenciesList(currNode.linkAdjacenciesList, link[1]):
+                    currNode.linkAdjacenciesList.append(link[1])
+                if link[1] == city and not self.nodeInAdjacenciesList(currNode.linkAdjacenciesList, link[0]):
+                    currNode.linkAdjacenciesList.append(link[0])
+            for path in node[pathsIdx]: # link is (origin, destination)
+                if path[0] == city and not self.nodeInAdjacenciesList(currNode.pathAdjacenciesList, path[1]):
+                    currNode.pathAdjacenciesList.append(path[1])
+                if path[1] == city and not self.nodeInAdjacenciesList(currNode.pathAdjacenciesList, path[0]):
+                    currNode.pathAdjacenciesList.append(path[0])
             self.nodesList.append(currNode)
             self.bfsNodes[currNode.name] = currNode
 
@@ -425,13 +441,22 @@ class DriverlogProblem(search.Problem):
         maxKey = 0
         for key in dictionary.keys():
             if dictionary[key] > maxVal and not math.isinf(dictionary[key]):
-                connectedComponent = 1
                 maxVal = dictionary[key]
                 maxKey = key
         return maxKey
 
+        ###### Avg Calc ###########
+        # values = []
+        # for key, val in dictionary.iteritems():
+        #     values.append(val)
+        # values.sort()
+        # for key, val in dictionary.iteritems():
+        #     if val == values[len(values)/2]:
+        #         return key
+        # return -1
+        ############################
 
-    def driver_h(self, node, linkgraph, pathgraph, penalty):
+    def driver_h(self, node, graph, penalty):
         for driver, loc in node.state[startingPositionsIdx][currDriverIdx]: # (driver, location) or (driver,truck)
             important = self.isItemImportant(driver)  # (True/False, loc/"")
             if not important[0]:
@@ -441,133 +466,138 @@ class DriverlogProblem(search.Problem):
             linkPenalty = 0
             if (driver, loc) not in self.goal:
                 if loc in node.state[locationIdx]: # if the driver is currently in a city
-                    # do bfs on pathGraph to find distance between loc and driverGoalLoc
-                    for path in pathgraph.nodesList:
-                        if path.name == loc:
-                            distPathDict = bfs(path, node.state[locationIdx], pathgraph.bfsNodes)
+                    # do bfs on Graph to find distance between loc and driverGoalLoc
+                    for gnode in graph.nodesList:
+                        if gnode.name == loc:
+                            distPathDict = bfs(gnode, node.state[locationIdx], graph.bfsNodes, "path")
                             pathPenalty = penalty + distPathDict[driverGoalLoc]
-                            break
-                    # bfs on linkGraph to find distance between loc and driverGoalLoc + add penalty for getting on truck
-                    for link in linkgraph.nodesList:
-                        if link.name == loc:
-                            distLinkDict = bfs(link, node.state[locationIdx], linkgraph.bfsNodes)
+                            distLinkDict = bfs(gnode, node.state[locationIdx], graph.bfsNodes, "link")
                             if self.doesCityHaveTruck(loc, node.state):
-                                linkPenalty = penalty + distLinkDict[driverGoalLoc] + 1
+                                linkPenalty = penalty + distLinkDict[driverGoalLoc] + 6
                             else:
+                                #  bring truck through links
                                 maxkey = self.maxValInDict(distLinkDict)
                                 if maxkey == 0:
-                                    linkPenalty = penalty + distLinkDict[driverGoalLoc] + 1000 + 1
+                                    linkPenalty = penalty + distLinkDict[driverGoalLoc] + 100 + 1
                                 else:
-                                    linkPenalty = penalty + distLinkDict[driverGoalLoc] + distLinkDict[maxkey] + 1
+                                    linkPenalty = penalty + distLinkDict[driverGoalLoc] + distLinkDict[maxkey] + 6
+                            penalty = max(linkPenalty, pathPenalty)
                             break
-                    penalty = max(linkPenalty, pathPenalty)
-                else: # driver is currently in truck, # find what city the truck is in
-                    pathPenalty = 0
-                    linkPenalty = 0
+                else:  # driver is currently in truck, # find what city the truck is in
                     for truck, city in node.state[startingPositionsIdx][currTruckIdx]:
                         if truck == loc:
-                            # do bfs on pathGraph to find distance between city and driverGoalLoc + penalty
-                            for path in pathgraph.nodesList:
-                                if path.name == city:
-                                    distPathDict = bfs(path, node.state[locationIdx], pathgraph.bfsNodes)
-                                    pathPenalty = penalty + distPathDict[driverGoalLoc] + 1
+                            # do bfs on Graph to find distance between city and driverGoalLoc + penalty
+                            for gnode in graph.nodesList:
+                                if gnode.name == city:
+                                    distPathDict = bfs(gnode, node.state[locationIdx], graph.bfsNodes, "path")
+                                    pathPenalty = penalty + distPathDict[driverGoalLoc] + 6
+                                    distLinkDict = bfs(gnode, node.state[locationIdx], graph.bfsNodes, "link")
+                                    linkPenalty = penalty + distLinkDict[driverGoalLoc] + 6
+                                    penalty = max(linkPenalty, pathPenalty)
                                     break
-                            # bfs on linkGraph to find distance between city and driverGoalLoc
-                            for link in linkgraph.nodesList:
-                                if link.name == city:
-                                    distLinkDict = bfs(link, node.state[locationIdx], linkgraph.bfsNodes)
-                                    linkPenalty = penalty + distLinkDict[driverGoalLoc] + 1
-                                    break
-                    penalty = max(linkPenalty, pathPenalty)
         return penalty
 
-    def truck_h(self, node, linkgraph, pathgraph, penalty):
-        # linkPenalty = infinity
-        # pathPenalty = infinity
+    def truck_h(self, node, graph, penalty):
         for truck, city in node.state[startingPositionsIdx][currTruckIdx]:  # (truck, location)
+            pathPenalty = 0
+            linkPenalty = 0
             important = self.isItemImportant(truck)  # (True/False, loc/"")
             if not important[0]:
                 continue
             truckGoalLoc = important[1]
             if (truck, city) not in self.goal:
-                # for path in pathgraph.nodesList:  # bring driver via path
-                #     if path.name == city:
-                #         distPathDict = bfs(path, node.state[locationIdx])
-                #         if not self.doesTruckHaveDriver(node.state, truck):
-                #             maxkey = self.maxValInDict(distPathDict)
-                #             pathPenalty = penalty + distPathDict[truckGoalLoc] + distPathDict[maxkey] + 1
-                for link in linkgraph.nodesList:  # bring driver via links
-                    if link.name == city:
+                for gnode in graph.nodesList:  # bring driver via links
+                    if gnode.name == city:
                         # print "bfs w/ link graph "
-                        distLinkDict = bfs(link, node.state[locationIdx], linkgraph.bfsNodes)
+                        distLinkDict = bfs(gnode, node.state[locationIdx], graph.bfsNodes, "link")
                         if not self.doesTruckHaveDriver(node.state, truck):
-                            maxkey = self.maxValInDict(distLinkDict)
-                            if maxkey == 0:
-                                penalty = penalty + distLinkDict[truckGoalLoc] + 1000 + 2
+                            #  bring driver through links
+                            maxkeyLink = self.maxValInDict(distLinkDict)
+                            if maxkeyLink == 0:
+                                linkPenalty = penalty + distLinkDict[truckGoalLoc] + 100 + 2
                             else:
-                                penalty = penalty + distLinkDict[truckGoalLoc] + distLinkDict[maxkey] + 2
+                                linkPenalty = penalty + distLinkDict[truckGoalLoc] + distLinkDict[maxkeyLink] + 7
+                            #  bring driver through paths
+                            distPathDict = bfs(gnode, node.state[locationIdx], graph.bfsNodes, "path")
+                            maxkeyPath = self.maxValInDict(distPathDict)
+                            if maxkeyPath == 0:
+                                pathPenalty = penalty + distLinkDict[truckGoalLoc] + 100
+                            else:
+                                pathPenalty = penalty + distLinkDict[truckGoalLoc] + distPathDict[maxkeyLink] + 5
                         else:
-                            # linkPenalty = penalty + distLinkDict[truckGoalLoc]
-                            penalty = penalty + distLinkDict[truckGoalLoc]
+                            linkPenalty = penalty + distLinkDict[truckGoalLoc]
+                        penalty = max(linkPenalty, pathPenalty)
                         break
-                # if (linkPenalty is not infinity and pathPenalty is not infinity):
-                #     penalty = min(linkPenalty, pathPenalty)
         return penalty
 
 
-    def package_h(self, node, linkgraph, pathgraph, penalty):
+    def package_h(self, node, graph, penalty):
         for package, loc in node.state[startingPositionsIdx][currPackIdx]:
             important = self.isItemImportant(package)  # (True/False, loc/"")
             if not important[0]:
                 continue
             packageGoalLoc = important[1]
+            pathPenalty = 0
+            linkPenalty = 0
             if not self.inGoalState((package, loc), self.goal):  # package not in goal city / truck yet.
                 if self.locIsTruck(loc, node.state[truckIdx]):  # current location for package is truck
                     for truck, city in node.state[startingPositionsIdx][currTruckIdx]:
                         if loc == truck:  # the truck the package is on
                             city = self.findCityOfTruck(loc, node.state[startingPositionsIdx][currTruckIdx])
-                            # for path in pathgraph.nodesList:  # bring driver via path
-                            #     if path.name == city:
-                            #         distPathDict = bfs(path, node.state[locationIdx])
-                            #         if not self.doesTruckHaveDriver(node.state, truck):
-                            #             maxkey = self.maxValInDict(distPathDict)
-                            #             pathPenalty = penalty + distPathDict[packageGoalLoc] + distPathDict[maxkey] + 1
-                            for link in linkgraph.nodesList:
-                                if link.name == city:
-                                    distLinkDict = bfs(link, node.state[locationIdx], linkgraph.bfsNodes)
+                            for gnode in graph.nodesList:
+                                if gnode.name == city:
+                                    distLinkDict = bfs(gnode, node.state[locationIdx], graph.bfsNodes, "link")
                                     if not self.doesTruckHaveDriver(node.state, truck):
-                                        maxkey = self.maxValInDict(distLinkDict)
-                                        if maxkey == 0:
-                                            penalty = penalty + distLinkDict[packageGoalLoc] + 1000 + 2
+                                        # bring driver through links
+                                        maxkeyLink = self.maxValInDict(distLinkDict)
+                                        if maxkeyLink == 0:
+                                            linkPenalty = penalty + distLinkDict[packageGoalLoc] + 100 + 2
                                         else:
-                                            penalty = penalty + distLinkDict[packageGoalLoc] + distLinkDict[maxkey] + 2
+                                            linkPenalty = penalty + distLinkDict[packageGoalLoc]+ distLinkDict[maxkeyLink] + 7
+                                        # bring driver through paths
+                                        distPathDict = bfs(gnode, node.state[locationIdx], graph.bfsNodes, "path")
+                                        maxkeyPath = self.maxValInDict(distLinkDict)
+                                        if maxkeyPath == 0:
+                                            pathPenalty = penalty + distLinkDict[packageGoalLoc] + 100
+                                        else:
+                                            pathPenalty = penalty + distLinkDict[packageGoalLoc] + distPathDict[maxkeyPath] + 5
                                     else:
-                                        penalty = penalty + distLinkDict[packageGoalLoc] + 1
+                                        linkPenalty = penalty + distLinkDict[packageGoalLoc] + 6
+                                    penalty = max(linkPenalty, pathPenalty)
                                     break
 
-                else: # current loc of package is city
-                    for link in linkgraph.nodesList:
-                        if link.name == loc:
-                            distLinkDict = bfs(link, node.state[locationIdx], linkgraph.bfsNodes)
+                else:  # current loc of package is city
+                    for gnode in graph.nodesList:
+                        if gnode.name == loc:
+                            distLinkDict = bfs(gnode, node.state[locationIdx], graph.bfsNodes, "link")
                             trucks = self.trucksInCity(node.state, loc)
                             truckWithDriver = 0
                             for truck in trucks:
                                 if self.doesTruckHaveDriver(node.state, truck):
                                     truckWithDriver = 1
-                            if truckWithDriver == 1:
-                                penalty = penalty + distLinkDict[packageGoalLoc] + 2
-                            elif len(trucks) == 0:
+                            if truckWithDriver == 1:  # there's at least one truck with a driver
+                                linkPenalty = penalty + distLinkDict[packageGoalLoc] + 7
+                            elif len(trucks) == 0:  # there are no trucks in city
                                 maxkey = self.maxValInDict(distLinkDict)
                                 if maxkey == 0:
-                                    penalty = penalty + 1000 + distLinkDict[packageGoalLoc] + 2
+                                    linkPenalty = penalty + 100 + distLinkDict[packageGoalLoc] + 7
                                 else:
-                                    penalty = penalty + 2 * distLinkDict[maxkey] + distLinkDict[packageGoalLoc] + 2
-                            else:
-                                maxkey = self.maxValInDict(distLinkDict)
-                                if maxkey == 0:
-                                    penalty = penalty + 1000 + distLinkDict[packageGoalLoc] + 2
+                                    linkPenalty = penalty + 2 * distLinkDict[maxkey] + distLinkDict[packageGoalLoc] + 7
+                            else:  # there are only trucks with no drivers in city
+                                # bring driver though link
+                                maxkeyLink = self.maxValInDict(distLinkDict)
+                                if maxkeyLink == 0:
+                                    linkPenalty = penalty + 100 + distLinkDict[packageGoalLoc] + 2
                                 else:
-                                    penalty = penalty + distLinkDict[maxkey] + distLinkDict[packageGoalLoc] + 2
+                                    linkPenalty = penalty + distLinkDict[maxkeyLink] + distLinkDict[packageGoalLoc] + 7
+                                #bring driver through paths
+                                distPathDict = bfs(gnode, node.state[locationIdx], graph.bfsNodes, "path")
+                                maxkeyPath = self.maxValInDict(distLinkDict)
+                                if maxkeyPath == 0:
+                                    pathPenalty = penalty + 100 + distPathDict[packageGoalLoc] + 2
+                                else:
+                                    pathPenalty = penalty + distPathDict[maxkeyPath] + distLinkDict[packageGoalLoc] + 6
+                            penalty = max(linkPenalty, pathPenalty)
                             break
         return penalty
 
@@ -576,23 +606,20 @@ class DriverlogProblem(search.Problem):
         # """ This is the heuristic. It gets a node (not a state)
         # and returns a goal distance estimate
         # Must return an integer"""
-        linkgraph = Graph(linksIdx)
-        linkgraph.createGraph(node.state)
-        # linkgraph.printGraph("Link Graph")
-        # linkgraph.printBFSNodes()
-        pathgraph = Graph(pathsIdx)
-        pathgraph.createGraph(node.state)
-        # pathgraph.printGraph("Path Graph")
+        graph = Graph()
+        graph.createGraph(node.state)
+        # graph.printGraph("Link Graph")
+        # graph.printBFSNodes()
         penalty = 0
         # for drivers
         # print 1
-        penalty = self.driver_h(node, linkgraph, pathgraph, penalty)
+        penalty = self.driver_h(node, graph, penalty)
         # for trucks
         # print 2
-        penalty = self.truck_h(node, linkgraph, pathgraph, penalty)
+        penalty = self.truck_h(node, graph, penalty)
         # for packages
         # print 3
-        penalty = self.package_h(node, linkgraph, pathgraph, penalty)
+        penalty = self.package_h(node, graph, penalty)
 
         return penalty
         # return 0
